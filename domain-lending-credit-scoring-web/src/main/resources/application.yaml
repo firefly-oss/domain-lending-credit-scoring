@@ -1,0 +1,126 @@
+spring:
+  application:
+    name: domain-lending-credit-scoring
+    version: 1.0.0
+    description: Lending Domain Credit Scoring Orchestration Service
+    team:
+      name: Firefly Software Solutions Inc
+      email: dev@getfirefly.io
+
+  threads:
+    virtual:
+      enabled: true
+
+firefly:
+  cqrs:
+    enabled: true
+    command:
+      timeout: 30s
+      metrics-enabled: true
+      tracing-enabled: true
+    query:
+      timeout: 15s
+      caching-enabled: true
+      cache-ttl: 15m
+  saga.performance.enabled: true
+
+  eda:
+    enabled: true
+    default-publisher-type: KAFKA
+    default-connection-id: default
+    publishers:
+      kafka:
+        default:
+          enabled: true
+          default-topic: domain-layer
+          bootstrap-servers: localhost:9092
+
+  stepevents:
+    enabled: true
+
+server:
+  address: ${SERVER_ADDRESS:localhost}
+  port: ${SERVER_PORT:8042}
+  shutdown: graceful
+
+# Downstream core service base paths
+api-configuration:
+  core-platform:
+    credit-scoring:
+      base-path: ${CREDIT_SCORING_URL:http://localhost:8085}
+  core-data:
+    credit-bureaus:
+      base-path: ${CREDIT_BUREAUS_URL:http://localhost:8089}
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tagsSorter: alpha
+    operationsSorter: method
+    docExpansion: none
+    filter: true
+  packages-to-scan: com.firefly.domain.lending.creditscoring.web.controllers
+  paths-to-match: /api/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    root: INFO
+    com.firefly: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: pre
+
+logging:
+  level:
+    root: INFO
+    com.firefly: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    root: WARN
+    com.firefly: INFO
+    org.springframework: WARN
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
