@@ -1,0 +1,441 @@
+openapi: 3.0.1
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:18080
+  description: Generated server url
+tags:
+- name: Credit Scoring
+  description: Domain-level orchestration for credit scoring workflows
+paths:
+  /api/v1/scoring/requests:
+    post:
+      tags:
+      - Credit Scoring
+      summary: Request scoring
+      description: "Executes the full credit scoring process: creates a scoring case,\
+        \ fetches bureau data, and computes the scoring result."
+      operationId: requestScoring
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestScoringCommand"
+        required: true
+      responses:
+        "200":
+          description: Scoring process initiated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SagaResult"
+        "400":
+          description: Invalid request payload
+        "500":
+          description: Scoring process failed
+  /api/v1/credit-scoring/cases:
+    post:
+      tags:
+      - Credit Scoring
+      summary: Initiate scoring case (legacy)
+      description: Opens a new credit scoring case. Prefer POST /api/v1/scoring/requests
+        for the full workflow.
+      operationId: initiateScoring
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InitiateScoringCaseCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+  /api/v1/scoring/requests/{requestId}/result:
+    get:
+      tags:
+      - Credit Scoring
+      summary: Get scoring result
+      description: Retrieves the computed scoring result for a given scoring request.
+      operationId: getScoringResult
+      parameters:
+      - name: requestId
+        in: path
+        description: Unique identifier of the scoring request
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Scoring result found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoringResultDTO"
+        "404":
+          description: Result not yet available
+  /api/v1/scoring/requests/{requestId}/bureau-reports:
+    get:
+      tags:
+      - Credit Scoring
+      summary: Get bureau reports
+      description: Retrieves all credit bureau call records associated with a scoring
+        request.
+      operationId: getBureauReports
+      parameters:
+      - name: requestId
+        in: path
+        description: Unique identifier of the scoring request
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Bureau reports retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginationResponseScoringBureauCallDTO"
+        "404":
+          description: Scoring request not found
+  /api/v1/scoring/requests/{requestId}:
+    get:
+      tags:
+      - Credit Scoring
+      summary: Get scoring request status
+      description: Retrieves the current status of a scoring request by its identifier.
+      operationId: getScoringRequest
+      parameters:
+      - name: requestId
+        in: path
+        description: Unique identifier of the scoring request
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Scoring request found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoringCaseDTO"
+        "404":
+          description: Scoring request not found
+  /api/v1/scoring/models:
+    get:
+      tags:
+      - Credit Scoring
+      summary: Get scoring models
+      description: Retrieves the list of available scoring models from the core service.
+      operationId: getScoringModels
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Scoring models retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginationResponseScoringModelDTO"
+  /api/v1/credit-scoring/cases/{scoringCaseId}:
+    get:
+      tags:
+      - Credit Scoring
+      summary: Get scoring case (legacy)
+      description: "Retrieves a credit scoring case by its identifier. Prefer GET\
+        \ /api/v1/scoring/requests/{requestId}."
+      operationId: getScoringCase
+      parameters:
+      - name: scoringCaseId
+        in: path
+        description: Unique identifier of the scoring case
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoringCaseDTO"
+components:
+  schemas:
+    RequestScoringCommand:
+      required:
+      - applicationId
+      - partyId
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        partyId:
+          type: string
+          format: uuid
+        scoringModelId:
+          type: string
+          format: uuid
+    SagaResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        failed:
+          type: boolean
+    InitiateScoringCaseCommand:
+      type: object
+      properties:
+        loanApplicationId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        caseType:
+          type: string
+    ScoringResultDTO:
+      required:
+      - scoreOutcome
+      - scoreValue
+      - scoringRequestId
+      type: object
+      properties:
+        scoringResultId:
+          type: string
+          format: uuid
+        scoringRequestId:
+          type: string
+          format: uuid
+        scoreValue:
+          type: number
+        scoreOutcome:
+          type: string
+          enum:
+          - APPROVE
+          - REJECT
+          - MANUAL_REVIEW
+          - REFER_TO_SUPERVISOR
+        reasonCodes:
+          type: string
+        extraDetails:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PaginationResponseScoringBureauCallDTO:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoringBureauCallDTO"
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        currentPage:
+          type: integer
+          format: int32
+    ScoringBureauCallDTO:
+      required:
+      - bureauName
+      - callDate
+      - isSuccess
+      - referenceCode
+      - scoringCaseId
+      type: object
+      properties:
+        scoringBureauCallId:
+          type: string
+          format: uuid
+        scoringCaseId:
+          type: string
+          format: uuid
+        bureauName:
+          type: string
+          enum:
+          - AXESOR
+          - EQUIFAX
+          - EXPERIAN
+          - ASNEF
+          - OTHER
+        callDate:
+          type: string
+          format: date-time
+        referenceCode:
+          type: string
+        isSuccess:
+          type: boolean
+        rawResponse:
+          type: string
+        note:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ScoringCaseDTO:
+      required:
+      - caseStatus
+      - caseType
+      - customerId
+      type: object
+      properties:
+        scoringCaseId:
+          type: string
+          format: uuid
+        loanApplicationId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        caseStatus:
+          type: string
+          enum:
+          - OPEN
+          - COMPLETED
+          - FAILED
+          - CANCELLED
+        caseType:
+          type: string
+          enum:
+          - APPLICATION
+          - RE_SCORING
+          - PORTFOLIO_MONITOR
+          - PRE_APPROVAL
+        remarks:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PaginationResponseScoringModelDTO:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoringModelDTO"
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        currentPage:
+          type: integer
+          format: int32
+    ScoringModelDTO:
+      required:
+      - modelApproach
+      - modelName
+      - modelStatus
+      - modelVersion
+      - scoreDimension
+      type: object
+      properties:
+        scoringModelId:
+          type: string
+          format: uuid
+        modelName:
+          type: string
+        modelVersion:
+          type: string
+        scoreDimension:
+          type: string
+          enum:
+          - FINANCIAL
+          - NON_FINANCIAL
+          - COMBINED
+          - BEHAVIORAL
+        modelApproach:
+          type: string
+          enum:
+          - AI
+          - RULES_BASED
+          - HYBRID
+          - STATISTICAL
+        modelStatus:
+          type: string
+          enum:
+          - ACTIVE
+          - DEPRECATED
+          - TESTING
+          - DISABLED
+        note:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
