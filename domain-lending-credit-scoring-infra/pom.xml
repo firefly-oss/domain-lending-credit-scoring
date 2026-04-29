@@ -34,12 +34,6 @@
             <artifactId>core-lending-credit-scoring-sdk</artifactId>
         </dependency>
 
-        <!-- Core data credit-bureaus SDK — stub jar (no classes yet); bureau call data tracked in scoring SDK -->
-        <dependency>
-            <groupId>com.firefly</groupId>
-            <artifactId>core-data-credit-bureaus-sdk</artifactId>
-        </dependency>
-
         <!-- Spring WebFlux -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
