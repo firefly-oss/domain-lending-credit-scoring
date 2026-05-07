@@ -47,10 +47,10 @@ server:
 api-configuration:
   core-platform:
     credit-scoring:
-      base-path: ${ENDPOINT_CORE_PLATFORM_CREDIT_SCORING:http://localhost:8085}
+      base-path: ${ENDPOINT_CORE_CREDIT_SCORING:http://localhost:8085}
   core-data:
     credit-bureaus:
-      base-path: ${ENDPOINT_CORE_DATA_CREDIT_BUREAUS:http://localhost:8089}
+      base-path: ${ENDPOINT_DOMAIN_DATA_CREDIT_BUREAUS:http://localhost:8089}
 
 springdoc:
   api-docs:
