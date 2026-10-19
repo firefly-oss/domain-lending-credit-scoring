@@ -14,6 +14,7 @@ import reactor.test.StepVerifier;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 /**
@@ -38,7 +39,7 @@ class GetScoringRequestHandlerTest {
         UUID requestId = UUID.randomUUID();
         ScoringCaseDTO dto = new ScoringCaseDTO();
 
-        when(scoringCaseApi.getById1(requestId, any())).thenReturn(Mono.just(dto));
+        when(scoringCaseApi.getById1(eq(requestId), any())).thenReturn(Mono.just(dto));
 
         // when / then
         StepVerifier.create(handler.doHandle(GetScoringRequestQuery.builder().requestId(requestId).build()))
@@ -50,7 +51,7 @@ class GetScoringRequestHandlerTest {
     void doHandle_propagatesEmptyFromApi() {
         // given
         UUID requestId = UUID.randomUUID();
-        when(scoringCaseApi.getById1(requestId, any())).thenReturn(Mono.empty());
+        when(scoringCaseApi.getById1(eq(requestId), any())).thenReturn(Mono.empty());
 
         // when / then
         StepVerifier.create(handler.doHandle(GetScoringRequestQuery.builder().requestId(requestId).build()))
