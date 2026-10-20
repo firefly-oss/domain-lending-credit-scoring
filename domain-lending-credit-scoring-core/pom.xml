@@ -10,6 +10,7 @@
     </parent>
 
     <artifactId>domain-lending-credit-scoring-core</artifactId>
+    <name>domain-lending-credit-scoring-core</name>
 
     <properties>
         <maven.compiler.source>25</maven.compiler.source>

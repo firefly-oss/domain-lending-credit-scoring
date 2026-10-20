@@ -12,6 +12,7 @@
     </parent>
 
     <artifactId>domain-lending-credit-scoring</artifactId>
+    <name>domain-lending-credit-scoring</name>
     <version>26.10.3</version>
     <packaging>pom</packaging>
 

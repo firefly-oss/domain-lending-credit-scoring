@@ -10,6 +10,7 @@
     </parent>
 
     <artifactId>domain-lending-credit-scoring-sdk</artifactId>
+    <name>domain-lending-credit-scoring-sdk</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
