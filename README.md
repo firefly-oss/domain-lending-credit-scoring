@@ -200,7 +200,7 @@ All GET operations pass no idempotency key (GET requests are inherently idempote
 
 | Service | SDK | Purpose |
 |---------|-----|---------|
-| `core-lending-credit-scoring` | `com.firefly.core.lending.scoring.sdk` — `ScoringCaseApi`, `ScoringRequestApi`, `ScoringResultApi`, `ScoringModelApi`, `ScoringBureauCallApi` | Primary downstream. Stores scoring cases, requests, results, bureau calls, and scoring models. Base path configured via `api-configuration.core-platform.credit-scoring.base-path`. |
+| `core-lending-credit-scoring` | `io.fireflysoftware.core.lending.scoring.sdk` — `ScoringCaseApi`, `ScoringRequestApi`, `ScoringResultApi`, `ScoringModelApi`, `ScoringBureauCallApi` | Primary downstream. Stores scoring cases, requests, results, bureau calls, and scoring models. Base path configured via `api-configuration.core-platform.credit-scoring.base-path`. |
 | Credit Bureaus data store | `ScoringBureauCallApi` (currently routed through `core-lending-credit-scoring`; will migrate to `core-data-credit-bureaus-sdk` when available) | Stores external credit-bureau interaction records. Base path configured via `api-configuration.core-data.credit-bureaus.base-path`. |
 
 ### Downstream (services that consume this microservice)
@@ -285,7 +285,7 @@ Exposed actuator endpoints: `health`, `info`, `prometheus`. Liveness and readine
 
 ### Logging profiles
 
-| Profile | Root level | `com.firefly` level | `org.springframework` |
+| Profile | Root level | `io.fireflysoftware` level | `org.springframework` |
 |---------|-----------|---------------------|-----------------------|
 | (default) | — | — | — |
 | `dev` | `INFO` | `DEBUG` | — |

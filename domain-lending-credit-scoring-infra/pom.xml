@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.firefly</groupId>
+        <groupId>io.fireflysoftware</groupId>
         <artifactId>domain-lending-credit-scoring</artifactId>
-        <version>26.10.2</version>
+        <version>26.10.3</version>
     </parent>
 
     <artifactId>domain-lending-credit-scoring-infra</artifactId>
@@ -30,7 +30,7 @@
 
         <!-- Core lending credit-scoring SDK — orchestrates scoring cases, requests, results, bureau calls -->
         <dependency>
-            <groupId>com.firefly</groupId>
+            <groupId>io.fireflysoftware</groupId>
             <artifactId>core-lending-credit-scoring-sdk</artifactId>
         </dependency>
 
