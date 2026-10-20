@@ -208,7 +208,7 @@ All properties are defined in `domain-lending-credit-scoring-web/src/main/resour
 | `spring.application.version` | `1.0.0` |
 | `spring.application.description` | `Lending Domain Credit Scoring Orchestration Service` |
 | `spring.application.team.name` | `Firefly Software Foundation` |
-| `spring.application.team.email` | `dev@getfirefly.io` |
+| `spring.application.team.email` | `dev@fireflysoftware.io` |
 
 ### Server
 
