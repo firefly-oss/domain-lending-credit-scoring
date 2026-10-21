@@ -1,9 +1,9 @@
 <a href="https://fireflysoftware.io/openplatform/">
 <picture>
-  <source media="(max-width: 640px) and (prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/firefly-oss/.github/main/profile/assets/banner-narrow-dark.svg">
-  <source media="(max-width: 640px)" srcset="https://raw.githubusercontent.com/firefly-oss/.github/main/profile/assets/banner-narrow-light.svg">
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/firefly-oss/.github/main/profile/assets/banner-dark.svg">
-  <img src="https://raw.githubusercontent.com/firefly-oss/.github/main/profile/assets/banner-light.svg" alt="Firefly OpenPlatform - Domain Lending - Credit Scoring" width="100%">
+  <source media="(max-width: 640px) and (prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/fireflysoftwaresolutions/.github/main/profile/assets/banner-narrow-dark.svg">
+  <source media="(max-width: 640px)" srcset="https://raw.githubusercontent.com/fireflysoftwaresolutions/.github/main/profile/assets/banner-narrow-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/fireflysoftwaresolutions/.github/main/profile/assets/banner-dark.svg">
+  <img src="https://raw.githubusercontent.com/fireflysoftwaresolutions/.github/main/profile/assets/banner-light.svg" alt="Firefly OpenPlatform - Domain Lending - Credit Scoring" width="100%">
 </picture>
 </a>
 
@@ -17,6 +17,8 @@ Developed by the Firefly Software Foundation. [dev@fireflysoftware.io](mailto:de
 
 ## Table of Contents
 - [Overview](#overview)
+- [Experience port](#experience-port)
+- [Decision adapters](#decision-adapters)
 - [Architecture](#architecture)
 - [Module Structure](#module-structure)
 - [API Endpoints](#api-endpoints)
@@ -35,6 +37,92 @@ Developed by the Firefly Software Foundation. [dev@fireflysoftware.io](mailto:de
 The service exposes a clean domain-level REST API that abstracts away internal core-service concepts. A "scoring request" at the domain level corresponds to a `ScoringCase` in the core service; the identifier (`requestId`) is the same UUID across both layers. All endpoints are fully reactive, returning `Mono` publishers that integrate cleanly into non-blocking pipelines.
 
 State-changing operations are driven through the Firefly framework's `SagaEngine` and `CommandBus`, ensuring that any partial failure during a multi-step workflow triggers automatic compensating transactions. Read operations flow through a `QueryBus` with a configurable cache TTL, reducing repeated load on the downstream service.
+
+The same service is the decision service for every journey, not only loans. `POST /api/v1/decisions` evaluates a named ruleset with the Jafly rules engine. The sample ruleset and the sandbox credit report are replaceable data and adapters, so a deployment can run without a live bureau.
+
+---
+
+## Experience port
+
+Experience services call `DecisionPort` (`io.fireflysoftware.domain.lending.creditscoring.core.decision.DecisionPort`). The HTTP adapter is `POST /api/v1/decisions`.
+
+Request fields:
+
+| Field | JSON | Required | Values |
+|-------|------|----------|--------|
+| Party id | `partyId` | yes | UUID |
+| Product id | `productId` | no | UUID |
+| Journey step | `journeyStep` | yes | `ONBOARDING`, `LENDING_APPLICATION`, `INSURANCE_QUOTE`, `INSURANCE_BIND`, `CLAIM` |
+| Attributes | `attributes` | no | map of facts |
+
+Response fields:
+
+| Field | JSON | Values |
+|-------|------|--------|
+| Outcome | `outcome` | `APPROVE`, `REFER`, or `DECLINE` |
+| Reason codes | `reasonCodes` | list of strings |
+
+```json
+{
+  "partyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "productId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+  "journeyStep": "ONBOARDING",
+  "attributes": {
+    "creditScore": 720,
+    "highRisk": false
+  }
+}
+```
+
+```json
+{
+  "outcome": "APPROVE",
+  "reasonCodes": ["APPROVED"]
+}
+```
+
+The sample ruleset `rulesets/openplatform-journey.yaml` decides:
+
+| Facts | Outcome | Reason code |
+|-------|---------|-------------|
+| `highRisk` is `true` | `DECLINE` | `HIGH_RISK` |
+| `creditScore` is missing | `REFER` | `CREDIT_ATTRIBUTES_MISSING` |
+| `creditScore` is below `MIN_CREDIT_SCORE` (`680`) | `REFER` | `CREDIT_SCORE_BELOW_THRESHOLD` |
+| otherwise | `APPROVE` | `APPROVED` |
+
+`680` is the ruleset constant `MIN_CREDIT_SCORE`. A score of `680` approves. A score of `679` refers.
+
+---
+
+## Decision adapters
+
+Three adapters sit around `DecisionService`. Outcomes are not hard-coded in Java.
+
+| Role | Port | Shipped class | What an installer replaces |
+|------|------|---------------|----------------------------|
+| Inbound | `DecisionPort` | `DecisionController` adapts HTTP onto `DecisionService` | Bind experience services to the request and response fields above. |
+| Rules | `RulesEnginePort` | `JaflyRulesEngineAdapter` | The ruleset file `domain-lending-credit-scoring-core/src/main/resources/rulesets/openplatform-journey.yaml`. Or set `firefly.decision.rulesets-directory` to a directory that contains `{ruleset}.yaml`. |
+| Credit report | `CreditReportPort` | `SandboxCreditReportAdapter` | This class. Set `firefly.decision.credit-report` to a value other than `sandbox` and register your own `CreditReportPort`. |
+
+### Jafly rules engine
+
+`JaflyRulesEngineAdapter` calls `org.fireflyframework.rules.core.dsl.evaluation.ASTRulesEvaluationEngine`.
+
+| Coordinate | Value |
+|------------|--------|
+| GitHub | [fireflyframework/fireflyframework-jafly](https://github.com/fireflyframework/fireflyframework-jafly) module `modules/rule-engine` |
+| Maven artifact | `org.fireflyframework:fireflyframework-rule-engine-core` |
+| Version | `org.fireflyframework:fireflyframework-bom` `26.10.20`, imported by `firefly-parent`. This service does not pin another Jafly version. |
+| Port | `io.fireflysoftware.domain.lending.creditscoring.core.decision.RulesEnginePort` |
+| Adapter | `io.fireflysoftware.domain.lending.creditscoring.core.decision.JaflyRulesEngineAdapter` |
+
+The engine reads the YAML ruleset in process. `YamlDefaultConstantService` returns no database rows, so each constant's `defaultValue` in the file is the value that is evaluated. This service does not start the Jafly rule database. Replace `JaflyRulesEngineAdapter` only when a deployment must call stored rules through `RulesEvaluationService` instead of a file.
+
+### Sandbox credit report
+
+`SandboxCreditReportAdapter` returns a fixed illustrative report and does not open a network connection. The report score is `640` and `highRisk` is `false`. Because `640` is below `MIN_CREDIT_SCORE`, a request that omits `creditScore` is `REFER` with `CREDIT_SCORE_BELOW_THRESHOLD`. Caller attributes override the report: send `creditScore` and `highRisk` to walk approve and decline.
+
+`domain-data-credit-bureaus` does not publish an HTTP API this service can call. A deployment that has that service, or a real bureau, replaces `SandboxCreditReportAdapter`. The default `firefly.decision.credit-report=sandbox` does not require the bureau process to be up.
 
 ---
 
@@ -94,6 +182,7 @@ Experience Layer (BFF / API Gateway)
 
 | Method | Path | Description | Success Status |
 |--------|------|-------------|----------------|
+| `POST` | `/api/v1/decisions` | Evaluate a journey decision (`APPROVE`, `REFER`, or `DECLINE`). See [Experience port](#experience-port). | `200 OK` |
 | `POST` | `/api/v1/scoring/requests` | Execute the full three-step credit scoring workflow (create case, fetch bureau data, compute result). Returns a `SagaResult`. | `200 OK` |
 | `GET` | `/api/v1/scoring/requests/{requestId}` | Retrieve the current status of a scoring request (`ScoringCaseDTO`). | `200 OK` / `404 Not Found` |
 | `GET` | `/api/v1/scoring/requests/{requestId}/result` | Retrieve the computed scoring result (`ScoringResultDTO`) for a request. | `200 OK` / `404 Not Found` |

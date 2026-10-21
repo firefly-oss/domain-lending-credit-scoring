@@ -31,10 +31,51 @@
             <artifactId>core-lending-credit-scoring-sdk</artifactId>
         </dependency>
 
+        <!-- Jafly rule engine (version from fireflyframework-bom 26.10.20). Embedded evaluation only. -->
+        <dependency>
+            <groupId>org.fireflyframework</groupId>
+            <artifactId>fireflyframework-rule-engine-core</artifactId>
+            <exclusions>
+                <!-- The rule-engine models pull a PostgreSQL pool. The sandbox evaluates YAML in process. -->
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-data-r2dbc</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.postgresql</groupId>
+                    <artifactId>r2dbc-postgresql</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.postgresql</groupId>
+                    <artifactId>postgresql</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-flyway</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-jdbc</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.flywaydb</groupId>
+                    <artifactId>flyway-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.flywaydb</groupId>
+                    <artifactId>flyway-database-postgresql</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
         <!-- Common Libraries -->
         <dependency>
             <groupId>org.fireflyframework</groupId>
             <artifactId>fireflyframework-utils</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.fireflyframework</groupId>

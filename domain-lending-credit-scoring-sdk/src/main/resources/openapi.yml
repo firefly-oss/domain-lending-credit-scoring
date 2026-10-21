@@ -8,7 +8,31 @@ servers:
 tags:
 - name: Credit Scoring
   description: Domain-level orchestration for credit scoring workflows
+- name: Decision
+  description: Evaluate an APPROVE, REFER, or DECLINE decision for any journey
 paths:
+  /api/v1/decisions:
+    post:
+      tags:
+      - Decision
+      summary: Evaluate a decision
+      description: Evaluates a named ruleset for a party, optional product, journey step, and attributes.
+      operationId: evaluateDecision
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecisionRequest"
+        required: true
+      responses:
+        "200":
+          description: Decision evaluated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionResponse"
+        "400":
+          description: Invalid request payload
   /api/v1/scoring/requests:
     post:
       tags:
@@ -439,3 +463,45 @@ components:
         updatedAt:
           type: string
           format: date-time
+    DecisionRequest:
+      required:
+      - partyId
+      - journeyStep
+      type: object
+      properties:
+        partyId:
+          type: string
+          format: uuid
+          description: Party the decision is about
+        productId:
+          type: string
+          format: uuid
+          description: Optional product the party is applying for
+        journeyStep:
+          type: string
+          enum:
+          - ONBOARDING
+          - LENDING_APPLICATION
+          - INSURANCE_QUOTE
+          - INSURANCE_BIND
+          - CLAIM
+        attributes:
+          type: object
+          additionalProperties: true
+          description: Caller-supplied facts. Credit facts may be absent.
+    DecisionResponse:
+      required:
+      - outcome
+      - reasonCodes
+      type: object
+      properties:
+        outcome:
+          type: string
+          enum:
+          - APPROVE
+          - REFER
+          - DECLINE
+        reasonCodes:
+          type: array
+          items:
+            type: string

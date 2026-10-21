@@ -38,6 +38,14 @@ firefly:
   stepevents:
     enabled: true
 
+  # Journey decision. The sample ruleset is classpath rulesets/openplatform-journey.yaml.
+  # credit-report=sandbox never calls a bureau. Set another value only after replacing
+  # SandboxCreditReportAdapter with a CreditReportPort that can reach a real bureau.
+  decision:
+    ruleset: ${DECISION_RULESET:openplatform-journey}
+    rulesets-directory: ${DECISION_RULESETS_DIRECTORY:}
+    credit-report: ${DECISION_CREDIT_REPORT:sandbox}
+
 server:
   address: ${SERVER_ADDRESS:localhost}
   port: ${SERVER_PORT:8042}

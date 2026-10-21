@@ -1,0 +1,48 @@
+# Sample OpenPlatform journey ruleset.
+# Replace this file to change outcomes. Thresholds live here, not in Java.
+#
+# MIN_CREDIT_SCORE is 680. A score below 680 is REFER.
+# The sandbox credit report's illustrative score is 640, which is below that threshold.
+# Attribute highRisk set to true is DECLINE.
+name: openplatform-journey
+description: Decide APPROVE, REFER, or DECLINE for any journey step
+constants:
+  - code: MIN_CREDIT_SCORE
+    name: Minimum credit score
+    type: number
+    defaultValue: 680
+decision_table:
+  inputs: [creditScore, highRisk]
+  outputs: [decision, reasonCodes]
+  hit_policy: FIRST
+  rules:
+    - name: high risk
+      when:
+        - highRisk equals true
+      then:
+        decision: DECLINE
+        reasonCodes:
+          - HIGH_RISK
+    - name: missing credit attributes
+      when:
+        - creditScore is_null
+      then:
+        decision: REFER
+        reasonCodes:
+          - CREDIT_ATTRIBUTES_MISSING
+    - name: score below threshold
+      when:
+        - creditScore is_not_null and creditScore less_than MIN_CREDIT_SCORE
+      then:
+        decision: REFER
+        reasonCodes:
+          - CREDIT_SCORE_BELOW_THRESHOLD
+    - name: approve
+      otherwise: true
+      then:
+        decision: APPROVE
+        reasonCodes:
+          - APPROVED
+output:
+  decision: text
+  reasonCodes: list
