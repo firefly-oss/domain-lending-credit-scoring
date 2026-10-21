@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package io.fireflysoftware.domain.lending.creditscoring.core.decision;
 
 import org.fireflyframework.core.filters.FilterRequest;
@@ -24,50 +23,89 @@ import org.fireflyframework.rules.interfaces.dtos.crud.ConstantDTO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Constant lookup that does not call a database.
- * Jafly then uses the {@code defaultValue} declared on each constant in the ruleset file.
+ * Keeps rule constants in memory for this decision service.
+ * A missing code still returns empty so the ruleset file default is used.
  */
 final class YamlDefaultConstantService implements ConstantService {
 
-    private static final String MESSAGE =
-            "This decision sandbox does not store rule constants. Thresholds come from the ruleset file.";
+    private final ConcurrentHashMap<UUID, ConstantDTO> byId = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, UUID> idByCode = new ConcurrentHashMap<>();
 
     @Override
     public Mono<PaginationResponse<ConstantDTO>> filterConstants(FilterRequest<ConstantDTO> filterRequest) {
-        return Mono.error(new UnsupportedOperationException(MESSAGE));
+        List<ConstantDTO> matches = new ArrayList<>(byId.values());
+        if (filterRequest != null && filterRequest.getFilters() != null && filterRequest.getFilters().getCode() != null) {
+            String code = filterRequest.getFilters().getCode();
+            matches = matches.stream().filter(constant -> code.equals(constant.getCode())).toList();
+        }
+        PaginationResponse<ConstantDTO> page = new PaginationResponse<>(matches, matches.size(), 1, 0);
+        return Mono.just(page);
     }
 
     @Override
     public Mono<ConstantDTO> createConstant(ConstantDTO constantDTO) {
-        return Mono.error(new UnsupportedOperationException(MESSAGE));
+        if (constantDTO.getId() == null) {
+            constantDTO.setId(UUID.randomUUID());
+        }
+        byId.put(constantDTO.getId(), constantDTO);
+        if (constantDTO.getCode() != null) {
+            idByCode.put(constantDTO.getCode(), constantDTO.getId());
+        }
+        return Mono.just(constantDTO);
     }
 
     @Override
     public Mono<ConstantDTO> updateConstant(UUID constantId, ConstantDTO constantDTO) {
-        return Mono.error(new UnsupportedOperationException(MESSAGE));
+        ConstantDTO existing = byId.get(constantId);
+        if (existing == null) {
+            return Mono.empty();
+        }
+        constantDTO.setId(constantId);
+        if (existing.getCode() != null) {
+            idByCode.remove(existing.getCode());
+        }
+        byId.put(constantId, constantDTO);
+        if (constantDTO.getCode() != null) {
+            idByCode.put(constantDTO.getCode(), constantId);
+        }
+        return Mono.just(constantDTO);
     }
 
     @Override
     public Mono<Void> deleteConstant(UUID constantId) {
-        return Mono.error(new UnsupportedOperationException(MESSAGE));
-    }
-
-    @Override
-    public Mono<ConstantDTO> getConstantById(UUID constantId) {
-        return Mono.error(new UnsupportedOperationException(MESSAGE));
-    }
-
-    @Override
-    public Mono<ConstantDTO> getConstantByCode(String code) {
+        ConstantDTO removed = byId.remove(constantId);
+        if (removed != null && removed.getCode() != null) {
+            idByCode.remove(removed.getCode(), constantId);
+        }
         return Mono.empty();
     }
 
     @Override
+    public Mono<ConstantDTO> getConstantById(UUID constantId) {
+        ConstantDTO constant = byId.get(constantId);
+        return constant == null ? Mono.empty() : Mono.just(constant);
+    }
+
+    @Override
+    public Mono<ConstantDTO> getConstantByCode(String code) {
+        UUID id = idByCode.get(code);
+        if (id == null) {
+            return Mono.empty();
+        }
+        return getConstantById(id);
+    }
+
+    @Override
     public Flux<ConstantDTO> getConstantsByCodes(List<String> codes) {
-        return Flux.empty();
+        if (codes == null || codes.isEmpty()) {
+            return Flux.empty();
+        }
+        return Flux.fromIterable(codes).flatMap(this::getConstantByCode);
     }
 }
